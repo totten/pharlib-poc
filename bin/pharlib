@@ -148,10 +148,10 @@ task_help() {
   echo "pharlib - Control script for building and testing PHP library PHAR archives"
   echo
   echo "Usage: pharlib <actions...>"
-  echo "Actions: download, clean, compile (or build), test, help"
+  echo "Actions: clean, download, compile (or build), test, help"
   echo
   echo "Examples:"
-  echo "  pharlib download clean compile test"
+  echo "  pharlib clean download compile test"
   echo "  pharlib clean compile"
   exit 0
 }

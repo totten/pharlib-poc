@@ -7,8 +7,6 @@ This project builds *.phar archives for common PHP libraries, such PSR Log, PHPS
 | Path | Description
 | -- | --
 | ./bin/pharlib | Control script
-| ./bin/composer.json | Dependenencies required by the control script
-| ./vendor/ | Dependencies required by the control script
 | ./lib/psr-log-3/ | Rules for building psr/log v3.x
 | ./lib/phpspreadsheet-5.8/ | Rules for building PHPSpreadsheet v5.8.x
 | ./lib/phpspreadsheet-5.9/ | Rules for building PHPSpreadsheet v5.9.x
@@ -51,6 +49,7 @@ foreach ($sheet->getRowIterator() as $row) {
     }
     echo "\n";
 }
+```
 
 ## Technical Details
 

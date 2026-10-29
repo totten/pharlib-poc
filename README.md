@@ -2,6 +2,8 @@
 
 This project builds *.phar archives for common PHP libraries, such PSR Log, PHPSpreadsheet, and Guzzle.
 
+> ___This is a quick sketch of a project. It was built in about an hour with AI assistance (but uses existing pathload-poc). The point is to show how much easier it is getting to reshape build/distribution.___
+
 ## Project Layout
 
 | Path | Description
@@ -64,7 +66,11 @@ foreach ($sheet->getRowIterator() as $row) {
     use-bknix php83 -r phpunit9
     ```
 
-* PHAR files are build with `box` and `php-scoper`. Prefixing is applied as follows:
+* PHAR files are build with `box` and `php-scoper`. In this iteration, prefixing follows this principle:
+
+    _Let the marquee packages through in the main namespace; and subordinate all namespaces for transitive dependencies_.
+
+    In particular, that means:
 
     * The primary namespace is NOT prefixed. (For example, in `phpspreadsheet@5`, the namespace is `PhpOffice\PhpSpreadsheet\`.)
     * The PSR namespace `Psr\` is NEVER prefixed.
@@ -78,5 +84,3 @@ foreach ($sheet->getRowIterator() as $row) {
     * `scoper.inc.php`: Rules for namespace-prefixing in the PHAR.
     * `tests/**.php`: Integration tests that use a PHAR file. For example, in `phpspreadsheet-5.8`, the test might write+read a simple XLSX file.
     * `phpunit.xml.dist`: 
-
-

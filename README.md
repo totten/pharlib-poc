@@ -8,15 +8,15 @@ This project builds *.phar archives for common PHP libraries, such PSR Log, PHPS
 
 | Path | Description
 | -- | --
-| ./bin/pharlib | Control script
-| ./lib/psr-log-3/ | Rules for building psr/log v3.x
-| ./lib/phpspreadsheet-5.8/ | Rules for building PHPSpreadsheet v5.8.x
-| ./lib/phpspreadsheet-5.9/ | Rules for building PHPSpreadsheet v5.9.x
-| ./lib/guzzle-7/ | Rules for building Guzzle 7.x
-| ./dist/PACKAGE@VERSION.TIMESTAMP.phar | Generated artifacts
-| ./dist/psr-log@3.0.0.202610101234.phar | Generated artifacts
-| ./dist/phpspreadsheet@5.8.1.2026101014321.phar | Generated artifacts
-| ./inspiration/ | Interesting snippets of code from similar efforts. These are not authoritative, but they may provide pointers+ideas.
+| `bin/pharlib` | Control script
+| `lib/psr-log-3/` | Rules for building psr/log v3.x
+| `lib/phpspreadsheet-5.8/` | Rules for building PHPSpreadsheet v5.8.x
+| `lib/phpspreadsheet-5.9/` | Rules for building PHPSpreadsheet v5.9.x
+| `lib/guzzle-7/` | Rules for building Guzzle 7.x
+| `dist/PACKAGE@VERSION.TIMESTAMP.phar` | Generated artifacts
+| `dist/psr-log@3.0.0.202610101234.phar` | Generated artifacts
+| `dist/phpspreadsheet@5.8.1.2026101014321.phar` | Generated artifacts
+| `inspiration/` | Interesting snippets of code from similar efforts. These are not authoritative, but they may provide pointers+ideas.
 
 ## Building libraries
 

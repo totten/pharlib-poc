@@ -1,4 +1,4 @@
-# pharlib
+# pharlib-poc
 
 This project builds *.phar archives for common PHP libraries, such PSR Log, PHPSpreadsheet, and Guzzle.
 

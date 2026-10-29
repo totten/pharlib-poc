@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+set -e
+
+BIN_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+PROJECT_ROOT=$(cd "$BIN_DIR/.." && pwd)
+CWD=$(pwd)
+
+# Helper function to run commands inside bknix php environment
+run_bknix() {
+  if command -v use-bknix >/dev/null 2>&1; then
+    use-bknix php83 -r "$@"
+  else
+    "$@"
+  fi
+}
+
+run_box() {
+  local box_bin=$(run_bknix which box 2>/dev/null || echo /home/totten/bknix/bin/box)
+  BOX_ALLOW_XDEBUG=1 run_bknix php -d phar.readonly=0 "$box_bin" "$@"
+}
+
+# Determine target library directories
+get_lib_dirs() {
+  if [[ "$CWD" == "$PROJECT_ROOT/lib/"* ]] && [ -d "$CWD" ]; then
+    echo "$CWD"
+  else
+    for d in "$PROJECT_ROOT/lib"/*; do
+      if [ -d "$d" ]; then
+        echo "$d"
+      fi
+    done
+  fi
+}
+
+task_download() {
+  local lib_dir="$1"
+  echo "==> [download] in $(basename "$lib_dir")"
+  pushd "$lib_dir" >/dev/null
+  if [ -f "download.sh" ]; then
+    bash download.sh
+  else
+    echo "No download.sh found in $lib_dir, skipping."
+  fi
+  popd >/dev/null
+}
+
+task_clean() {
+  local lib_dir="$1"
+  echo "==> [clean] in $(basename "$lib_dir")"
+  pushd "$lib_dir" >/dev/null
+  rm -rf vendor composer.lock pathload.main.php vendor.phar .box.cache
+  popd >/dev/null
+}
+
+task_compile() {
+  local lib_dir="$1"
+  echo "==> [compile] in $(basename "$lib_dir")"
+  pushd "$lib_dir" >/dev/null
+
+  if [ ! -f "composer.json" ]; then
+    echo "Error: No composer.json found in $lib_dir. Run 'pharlib download' first."
+    exit 1
+  fi
+
+  # Install composer production dependencies
+  run_bknix composer install --prefer-dist --no-progress --no-dev
+
+  # Determine folder name and major package name
+  local folder_name=$(basename "$lib_dir")
+  local pkg_base=""
+  local major_ver=""
+
+  if [[ "$folder_name" =~ ^([a-zA-Z0-9_-]+)-([0-9]+)(\.[0-9]+)?$ ]]; then
+    pkg_base="${BASH_REMATCH[1]}"
+    major_ver="${BASH_REMATCH[2]}"
+  else
+    pkg_base="$folder_name"
+    major_ver="1"
+  fi
+
+  local major_name="${pkg_base}@${major_ver}"
+
+  # Get exact version of primary installed package from composer.lock or installed.json
+  local full_ver=$(run_bknix php -r '
+    $inst = json_decode(file_get_contents("vendor/composer/installed.json"), true);
+    $pkgs = $inst["packages"] ?? $inst;
+    $pkgBase = "'"$pkg_base"'";
+    $targetVer = null;
+    foreach ($pkgs as $p) {
+      if (isset($p["name"])) {
+        $cleanName = str_replace(["/", "-"], "", strtolower($p["name"]));
+        $cleanBase = str_replace(["/", "-"], "", strtolower($pkgBase));
+        if ($cleanName === $cleanBase || str_ends_with($cleanName, $cleanBase)) {
+          $targetVer = $p["version"];
+          break;
+        }
+      }
+    }
+    echo ltrim($targetVer ?: "1.0.0", "v");
+  ')
+
+  # Generate pathload.main.php
+  run_bknix php "$PROJECT_ROOT/bin/generate-pathload.php" "." "$major_name" > pathload.main.php
+
+  # Compile PHAR with box
+  run_box compile -v
+
+  local timestamp=$(date +%Y%m%d%H%M%S)
+  local dist_dir="$PROJECT_ROOT/dist"
+  mkdir -p "$dist_dir"
+
+  local target_phar="$dist_dir/${pkg_base}@${full_ver}.${timestamp}.phar"
+  mv vendor.phar "$target_phar"
+  echo "Successfully built: $target_phar"
+
+  popd >/dev/null
+}
+
+task_test() {
+  local lib_dir="$1"
+  echo "==> [test] in $(basename "$lib_dir")"
+  pushd "$lib_dir" >/dev/null
+
+  local folder_name=$(basename "$lib_dir")
+  local pkg_base=""
+  if [[ "$folder_name" =~ ^([a-zA-Z0-9_-]+)-([0-9]+)(\.[0-9]+)?$ ]]; then
+    pkg_base="${BASH_REMATCH[1]}"
+  else
+    pkg_base="$folder_name"
+  fi
+
+  # Find latest built artifact
+  local latest_phar=$(ls -t "$PROJECT_ROOT/dist/${pkg_base}@"*.phar 2>/dev/null | head -n 1 || true)
+  if [ -z "$latest_phar" ]; then
+    echo "Error: No compiled PHAR found for ${pkg_base} in $PROJECT_ROOT/dist. Run 'pharlib compile' first."
+    exit 1
+  fi
+
+  echo "Testing with artifact: $latest_phar"
+  export TEST_PHAR="$latest_phar"
+
+  run_bknix phpunit9 || run_bknix phpunit
+
+  popd >/dev/null
+}
+
+task_help() {
+  echo "pharlib - Control script for building and testing PHP library PHAR archives"
+  echo
+  echo "Usage: pharlib <actions...>"
+  echo "Actions: download, clean, compile (or build), test, help"
+  echo
+  echo "Examples:"
+  echo "  pharlib download clean compile test"
+  echo "  pharlib clean compile"
+  exit 0
+}
+
+TASKS=()
+for arg in "$@"; do
+  case "$arg" in
+    download)
+      TASKS+=("task_download")
+      ;;
+    clean)
+      TASKS+=("task_clean")
+      ;;
+    compile|build)
+      TASKS+=("task_compile")
+      ;;
+    test)
+      TASKS+=("task_test")
+      ;;
+    help|-h|--help)
+      task_help
+      ;;
+    *)
+      echo "Unrecognized action: $arg"
+      task_help
+      ;;
+  esac
+done
+
+if [ ${#TASKS[@]} -eq 0 ]; then
+  task_help
+fi
+
+LIB_DIRS=($(get_lib_dirs))
+if [ ${#LIB_DIRS[@]} -eq 0 ]; then
+  echo "No library directories found in $PROJECT_ROOT/lib."
+  exit 1
+fi
+
+for task in "${TASKS[@]}"; do
+  for lib_dir in "${LIB_DIRS[@]}"; do
+    if [ -d "$lib_dir" ]; then
+      $task "$lib_dir"
+    fi
+  done
+done

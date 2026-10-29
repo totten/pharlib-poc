@@ -1,1 +1,6 @@
 /dist/
+/lib/*/vendor
+/lib/*/composer.lock
+/lib/*/composer.json
+/lib/*/pathload.main.php
+.phpunit.result.cache

@@ -123,14 +123,22 @@ task_test() {
 
   local folder_name=$(basename "$lib_dir")
   local pkg_base=""
-  if [[ "$folder_name" =~ ^([a-zA-Z0-9_-]+)-([0-9]+)(\.[0-9]+)?$ ]]; then
+  local ver_spec=""
+  if [[ "$folder_name" =~ ^([a-zA-Z0-9_-]+)-([0-9]+(\.[0-9]+)?)$ ]]; then
     pkg_base="${BASH_REMATCH[1]}"
+    ver_spec="${BASH_REMATCH[2]}"
   else
     pkg_base="$folder_name"
   fi
 
   # Find latest built artifact
-  local latest_phar=$(ls -t "$PROJECT_ROOT/dist/${pkg_base}@"*.phar 2>/dev/null | head -n 1 || true)
+  local latest_phar=""
+  if [ -n "$ver_spec" ]; then
+    latest_phar=$(ls -t "$PROJECT_ROOT/dist/${pkg_base}@${ver_spec}"*.phar 2>/dev/null | head -n 1 || true)
+  fi
+  if [ -z "$latest_phar" ]; then
+    latest_phar=$(ls -t "$PROJECT_ROOT/dist/${pkg_base}@"*.phar 2>/dev/null | head -n 1 || true)
+  fi
   if [ -z "$latest_phar" ]; then
     echo "Error: No compiled PHAR found for ${pkg_base} in $PROJECT_ROOT/dist. Run 'pharlib compile' first."
     exit 1
